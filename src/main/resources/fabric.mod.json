@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "meowy",
+  "version": "${version}",
+  "name": "Meowy",
+  "description": "100% client-side visual customization mod for Minecraft 26.2 featuring player/cape/armor opacity, hand viewmodel scale/XYZ/rotations/swing speed, camera & crosshair customization, NoForcedPacks resource pack control, custom skyboxes, Discord RPC, and custom 3D bow skins with laser projectiles.",
+  "authors": [
+    "Meowy"
+  ],
+  "contact": {
+    "sources": "https://discord.com/invite/VnC54WcfhS"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.meowy.client.MeowyClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "meowy.mixins.json",
+      "environment": "client"
+    },
+    {
+      "config": "meowy.dualwield.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": ">=0.161.0+26.2"
+  }
+}

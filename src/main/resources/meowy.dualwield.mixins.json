@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.meowy.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ItemInHandRendererDualWieldMixin",
+    "ItemModelResolverDualWieldMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "key.category.meowy.general": "Meowy",
+  "key.meowy.open_gui": "Open GUI",
+  "meowy.gui.title": "MEOWY",
+  "meowy.gui.sidebar.header": "SETTINGS",
+  "meowy.gui.category.player": "PLAYER",
+  "meowy.gui.category.hand": "HAND",
+  "meowy.gui.category.camera": "CAMERA",
+  "meowy.gui.category.visual": "VISUAL",
+  "meowy.gui.category.misc": "MISC",
+  "meowy.gui.reset": "RESET TO DEFAULT"
+}

@@ -1,0 +1,12 @@
+{
+  "ow.gui.title": "OW",
+  "ow.gui.subtitle": "Client-Side Bow Skin & Laser Projectile System",
+  "ow.gui.skin_label": "Active Bow Skin",
+  "ow.gui.preview_label": "Live Skin Preview",
+  "ow.gui.laser_bullet": "Laser Bullets",
+  "ow.gui.close": "Close",
+  "ow.skin.mccree_peacekeeper": "McCree's Peacekeeper",
+  "ow.skin.tracer_pulse_pistol": "Tracer's Pulse Pistol",
+  "key.category.ow.general": "OW",
+  "key.ow.open_gui": "Open OW GUI"
+}

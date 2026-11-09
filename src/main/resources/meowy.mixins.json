@@ -1,0 +1,35 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.meowy.client.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "EntityRenderStateMixin",
+    "LivingEntityRendererMixin",
+    "HumanoidArmorLayerMixin",
+    "EquipmentLayerRendererMixin",
+    "CustomHeadLayerMixin",
+    "WingsLayerMixin",
+    "CapeLayerMixin",
+    "AvatarRendererMixin",
+    "SubmitNodeStorageMixin",
+    "ItemInHandRendererMixin",
+    "LivingEntitySwingMixin",
+    "HudCrosshairMixin",
+    "CameraTypeMixin",
+    "OptionsMixin",
+    "LightmapMixin",
+    "SkyRendererMixin",
+    "ItemModelResolverMixin",
+    "AbstractContainerScreenMixin",
+    "HudMixin",
+    "ArrowRenderStateMixin",
+    "ArrowRendererMixin",
+    "AbstractArrowMixin",
+    "AbstractArrowAccessor",
+    "ArrowMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

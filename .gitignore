@@ -1,0 +1,7 @@
+
+# Meowy generated files
+.gradle/
+build/
+.idea/
+run/
+output/
