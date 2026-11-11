@@ -8,6 +8,7 @@ import dev.meowy.client.render.MeowyPreviewContext;
 import dev.ow.client.animation.CassidyAnimator;
 import dev.ow.client.animation.PistolAnimator;
 import dev.ow.client.skin.BowRenderContext;
+import dev.ow.client.skin.BowSkinManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -27,6 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Implements HAND category features & OW first-person weapon animations:
  * - Purely client-side high-FPS swing preview override when dragging Visual Swing Speed in the GUI
+ * - Suppresses the first-person swing/punch animation on bows when Custom Bow Skins is enabled
  * - Held Item X, Y, Z viewmodel position translation
  * - Held Item Side-to-Side and Forwards/Backwards rotations
  * - Held Item Scale (0.20x - 2.50x size scaling for the local player's held weapon/item)
@@ -48,7 +50,7 @@ public class ItemInHandRendererMixin {
         ordinal = 2,
         require = 0
     )
-    private float meowy$overridePreviewSwingProgress(
+    private float meowy$overridePreviewAndBowSwingProgress(
         float swingProgress,
         AbstractClientPlayer player,
         float partialTicks,
@@ -57,6 +59,12 @@ public class ItemInHandRendererMixin {
     ) {
         if (hand == InteractionHand.MAIN_HAND && MeowyPreviewContext.isPreviewSwingActive()) {
             return MeowyPreviewContext.getPreviewSwingProgress();
+        }
+        if (MeowyConfig.get().bowSkinsEnabled && player != null) {
+            if (BowSkinManager.isBow(player.getMainHandItem(), null)
+                || BowSkinManager.isBow(player.getOffhandItem(), null)) {
+                return 0.0f;
+            }
         }
         return swingProgress;
     }

@@ -68,7 +68,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         if (((MeowyRenderStateExt) state).meowy$isLocalPlayer()) {
             float opacity = MeowyConfig.get().playerModelOpacity;
             if (opacity < 0.999f) {
-                RenderOpacityContext.push(RenderOpacityContext.Target.PLAYER_BODY, opacity);
+                RenderOpacityContext.push(opacity);
                 try {
                     cir.setReturnValue(RenderOpacityContext.applyAlphaToColor(cir.getReturnValue()));
                 } finally {
@@ -91,7 +91,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
             state.xRot = ext.meowy$getPreviewPitch();
         }
         if (ext.meowy$isLocalPlayer()) {
-            RenderOpacityContext.push(RenderOpacityContext.Target.PLAYER_BODY, MeowyConfig.get().playerModelOpacity);
+            RenderOpacityContext.push(MeowyConfig.get().playerModelOpacity);
         }
     }
 

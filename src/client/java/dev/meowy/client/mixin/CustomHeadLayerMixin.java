@@ -26,7 +26,7 @@ public class CustomHeadLayerMixin<S extends LivingEntityRenderState> {
                 ci.cancel();
                 return;
             }
-            RenderOpacityContext.push(RenderOpacityContext.Target.HELMET, opacity);
+            RenderOpacityContext.push(opacity, RenderOpacityContext.ORDER_ARMOR);
         }
     }
 

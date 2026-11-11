@@ -28,7 +28,7 @@ public class AvatarRendererMixin {
             ci.cancel();
             return;
         }
-        RenderOpacityContext.push(RenderOpacityContext.Target.PLAYER_BODY, opacity);
+        RenderOpacityContext.push(opacity);
     }
 
     @Inject(method = {"renderRightHand", "renderLeftHand"}, at = @At("RETURN"))

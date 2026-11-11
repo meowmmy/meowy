@@ -1,10 +1,8 @@
 package dev.ow.client.skin;
 
-import dev.ow.client.animation.BowPullTracker;
-import dev.ow.client.animation.BowPullTracker.PullStage;
 import dev.ow.client.config.OwConfig;
-import dev.ow.client.skin.BowRenderContext.Frame;
-import dev.ow.client.skin.BowRenderContext.OwnerScope;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -13,7 +11,6 @@ import net.minecraft.world.item.Items;
 
 /**
  * Central client-side bow detection and model override resolver.
- * Every bow (vanilla bows and SkyBlock shortbows alike) is treated identically.
  */
 public final class BowSkinManager {
 
@@ -33,10 +30,7 @@ public final class BowSkinManager {
     }
 
     public static Identifier resolveBowModelOverride(ItemStack stack, Identifier originalModelId) {
-        if (!OwConfig.get().isBowSkinEnabled()) {
-            return null;
-        }
-        if (!isBow(stack, originalModelId)) {
+        if (!OwConfig.get().isBowSkinEnabled() || !isBow(stack, originalModelId)) {
             return null;
         }
         if (!BowRenderContext.shouldOverrideForLocalPlayer(stack)) {
@@ -44,15 +38,27 @@ public final class BowSkinManager {
         }
 
         BowSkin selectedSkin = OwConfig.get().getSelectedBowSkin();
-        Frame frame = BowRenderContext.current();
+        ItemDisplayContext displayContext = BowRenderContext.currentDisplayContext();
+        return isPullingBow(stack, displayContext)
+            ? selectedSkin.pullingItemModelId()
+            : selectedSkin.idleItemModelId();
+    }
 
-        if (frame != null && frame.scope() == OwnerScope.OW_GUI_PREVIEW) {
-            PullStage previewStage = frame.previewStage() != null ? frame.previewStage() : PullStage.IDLE;
-            return selectedSkin.itemModelForStage(previewStage.stageIndex());
+    private static boolean isPullingBow(ItemStack stack, ItemDisplayContext displayContext) {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.player == null || !client.player.isUsingItem()) {
+            return false;
         }
-
-        ItemDisplayContext displayContext = frame != null ? frame.displayContext() : ItemDisplayContext.GUI;
-        PullStage stage = BowPullTracker.getRenderPullStage(stack, displayContext);
-        return selectedSkin.itemModelForStage(stage.stageIndex());
+        LocalPlayer player = client.player;
+        boolean isHeldStack = (stack == player.getMainHandItem() || stack == player.getOffhandItem());
+        boolean isHandContext = displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+            || displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND
+            || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
+            || displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
+        if (!isHandContext && !isHeldStack) {
+            return false;
+        }
+        ItemStack useItem = player.getUseItem();
+        return useItem == stack || (isHandContext && isBow(useItem, null));
     }
 }

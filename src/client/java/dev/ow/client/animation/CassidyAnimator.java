@@ -6,7 +6,6 @@ import dev.ow.client.config.OwTuning;
 import dev.ow.client.projectile.LocalArrowTracker;
 import dev.ow.client.skin.BowSkin;
 import dev.ow.client.skin.BowSkinManager;
-import dev.ow.client.util.ScreenAccess;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -294,7 +293,7 @@ public final class CassidyAnimator {
         lastUpdateNs = now;
         float speed = OwTuning.CASSIDY_ANIMATION_SPEED;
 
-        boolean keyDown = client.options.keyUse.isDown() && ScreenAccess.current(client) == null;
+        boolean keyDown = client.options.keyUse.isDown() && client.gui.screen() == null;
         ItemStack useItem = player.isUsingItem() ? player.getUseItem() : ItemStack.EMPTY;
         boolean using = BowSkinManager.isBow(useItem, null);
         int useTicks = using ? player.getTicksUsingItem() : 0;

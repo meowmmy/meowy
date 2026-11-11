@@ -26,7 +26,7 @@ public class WingsLayerMixin<S extends HumanoidRenderState> {
                 ci.cancel();
                 return;
             }
-            RenderOpacityContext.push(RenderOpacityContext.Target.CHESTPLATE, opacity);
+            RenderOpacityContext.push(opacity, RenderOpacityContext.ORDER_ARMOR);
         }
     }
 

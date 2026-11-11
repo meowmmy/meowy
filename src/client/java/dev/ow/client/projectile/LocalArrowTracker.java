@@ -1,8 +1,10 @@
 package dev.ow.client.projectile;
 
 import dev.meowy.client.MeowyClient;
+import dev.meowy.client.render.HitmarkerManager;
 import dev.ow.client.animation.CassidyAnimator;
 import dev.ow.client.animation.PistolAnimator;
+import dev.ow.client.render.LaserBulletRenderer;
 import dev.ow.client.skin.BowSkinManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -60,13 +62,8 @@ public final class LocalArrowTracker {
 
     private LocalArrowTracker() {}
 
-    public static boolean isDebug() {
-        return debug;
-    }
-
-    public static boolean toggleDebug() {
-        debug = !debug;
-        return debug;
+    public static void setDebug(boolean value) {
+        debug = value;
     }
 
     public static boolean isLocalPlayerArrow(AbstractArrow arrow) {
@@ -81,6 +78,9 @@ public final class LocalArrowTracker {
         int arrowId = arrow.getId();
         Boolean cached = ARROW_OWNERSHIP_CACHE.get(arrowId);
         if (cached != null) {
+            if (cached) {
+                HitmarkerManager.onLocalArrowSeen(arrow);
+            }
             return cached;
         }
 
@@ -103,6 +103,7 @@ public final class LocalArrowTracker {
 
         if (local) {
             lastLocalShotMs = System.currentTimeMillis();
+            HitmarkerManager.onLocalArrowSeen(arrow);
             try {
                 PistolAnimator.onLocalArrowShot(); // visual recoil only
             } catch (Throwable t) {
@@ -248,8 +249,10 @@ public final class LocalArrowTracker {
     public static void tickCleanup(Minecraft client) {
         if (client == null || client.level == null) {
             ARROW_OWNERSHIP_CACHE.clear();
+            LaserBulletRenderer.cleanupCache(null);
             return;
         }
+        LaserBulletRenderer.cleanupCache(client.level);
         if (ARROW_OWNERSHIP_CACHE.size() > 256) {
             ARROW_OWNERSHIP_CACHE.keySet().removeIf(id -> client.level.getEntity(id) == null);
         }

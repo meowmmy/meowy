@@ -44,6 +44,8 @@ public final class CustomSkyboxRenderer {
     private static final float SKYBOX_DISTANCE = 100.0f;
     private static final Vector3f MODEL_OFFSET = new Vector3f();
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
+    private static final PoseStack SCRATCH_POSE_STACK = new PoseStack();
+    private static final Quaternionf SCRATCH_ROTATION = new Quaternionf();
     private static final StagedVertexBuffer STAGED_BUFFER = new StagedVertexBuffer(
         () -> "Meowy Custom Skybox Buffer",
         RenderType.SMALL_BUFFER_SIZE
@@ -79,7 +81,8 @@ public final class CustomSkyboxRenderer {
         double cosPart = 0.5 - Math.cos(frac * Math.PI) / 2.0;
         float celestialAngle = (float) (frac * 2.0 + cosPart) / 3.0f;
 
-        PoseStack poseStack = new PoseStack();
+        PoseStack poseStack = SCRATCH_POSE_STACK;
+        poseStack.pushPose();
         poseStack.mulPose(modelViewMatrix);
 
         List<LayerDraw> draws = new ArrayList<>(layers.size());
@@ -159,6 +162,7 @@ public final class CustomSkyboxRenderer {
                 }
             }
         } finally {
+            poseStack.popPose();
             STAGED_BUFFER.endFrame();
         }
     }
@@ -177,7 +181,7 @@ public final class CustomSkyboxRenderer {
         if (layer.rotate()) {
             Vector3f axis = layer.axis();
             float angleDegrees = celestialAngle * 360.0f * layer.speed();
-            Quaternionf rotation = new Quaternionf().fromAxisAngleDeg(axis.x, axis.y, axis.z, angleDegrees);
+            Quaternionf rotation = SCRATCH_ROTATION.fromAxisAngleDeg(axis.x, axis.y, axis.z, angleDegrees);
             poseStack.mulPose(rotation);
         }
 

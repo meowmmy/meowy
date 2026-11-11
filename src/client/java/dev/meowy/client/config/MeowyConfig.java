@@ -48,28 +48,27 @@ public final class MeowyConfig {
     public float visualSwingSpeed = 1.0f;        // 0.20f (0.2x) to 3.00f (3.0x), 100% client-side smooth animation
 
     // =========================================================================
-    // 3. CAMERA Category (Accurate Third-Person Crosshair, Front Camera & Entity Target Color)
+    // 3. CAMERA Category (Disable Front Camera & Accurate Third-Person Crosshair)
     // =========================================================================
     public boolean disableFrontCamera = false;
-    public boolean f5CrosshairEnabled = false;          // Always uses Accurate 3D raycast projection when enabled
-    public boolean dynamicCrosshairColorEnabled = false;
-    public int targetCrosshairRed = 130;                // Default #8271FF primary purple accent
-    public int targetCrosshairGreen = 113;
-    public int targetCrosshairBlue = 255;
+    public boolean f5CrosshairEnabled = false;   // Always uses Accurate 3D raycast projection when enabled
 
     // =========================================================================
     // 4. VISUAL Category (Fullbright & Custom Skybox)
     // =========================================================================
     public boolean fullbrightEnabled = false;
-    public boolean customSkyboxEnabled = false;         // Starts OFF by default
-    public float skyboxBrightness = 1.0f;               // 0.0f (0%) to 2.0f (200%), default 1.0f (100%)
+    public boolean customSkyboxEnabled = false;  // Starts OFF by default
+    public float skyboxBrightness = 1.0f;        // 0.0f (0%) to 2.0f (200%), default 1.0f (100%)
     public SkyboxFormat skyboxFormat = SkyboxFormat.OPTIFINE_STANDARD;
 
     // =========================================================================
-    // 5. MISC Category (Discord Rich Presence & Overwatch Bow Skins / Laser Bullets)
+    // 5. MISC Category (Discord RPC, Meowy Crosshair, Crosshair Scale, Hitmarkers, Bow Skins & Laser Bullets)
     // =========================================================================
-    public boolean discordRpcEnabled = false;           // Starts OFF by default
-    public boolean bowSkinsEnabled = false;             // Starts OFF by default
+    public boolean discordRpcEnabled = false;      // Starts OFF by default
+    public boolean meowyCrosshairEnabled = false;  // Starts OFF by default; hides default crosshair & draws CrosshairWithoutHitmarker.png
+    public float crosshairScale = 1.0f;            // 0.25f (0.25x) to 3.00f (3.00x), default 1.00f
+    public boolean hitmarkersEnabled = false;      // Starts OFF by default; draws Overwatch hitmarker from CrosshairWithHitmarker.png
+    public boolean bowSkinsEnabled = false;        // Starts OFF by default
     public BowSkin selectedBowSkin = BowSkin.MCCREE_PEACEKEEPER;
     public BowLaserMode bowLaserMode = BowLaserMode.ENABLED;
 
@@ -87,9 +86,6 @@ public final class MeowyConfig {
             return this.displayName;
         }
 
-        public BowLaserMode next() {
-            return this == ENABLED ? DISABLED : ENABLED;
-        }
     }
 
     public enum SkyboxFormat {
@@ -106,9 +102,6 @@ public final class MeowyConfig {
             return this.displayName;
         }
 
-        public SkyboxFormat next() {
-            return this == OPTIFINE_STANDARD ? LEGACY_1_8_9 : OPTIFINE_STANDARD;
-        }
     }
 
     public enum Category {
@@ -187,6 +180,8 @@ public final class MeowyConfig {
         this.heldItemRotForward = clamp(this.heldItemRotForward, -180.0f, 180.0f);
         this.visualSwingSpeed = clamp(this.visualSwingSpeed, 0.20f, 3.00f);
 
+        this.crosshairScale = clamp(this.crosshairScale, 0.25f, 3.00f);
+
         if (this.skyboxFormat == null) {
             this.skyboxFormat = SkyboxFormat.OPTIFINE_STANDARD;
         }
@@ -196,10 +191,6 @@ public final class MeowyConfig {
         if (this.bowLaserMode == null) {
             this.bowLaserMode = BowLaserMode.ENABLED;
         }
-        this.skyboxBrightness = clamp(this.skyboxBrightness, 0.0f, 2.0f);
-        this.targetCrosshairRed = Math.clamp(this.targetCrosshairRed, 0, 255);
-        this.targetCrosshairGreen = Math.clamp(this.targetCrosshairGreen, 0, 255);
-        this.targetCrosshairBlue = Math.clamp(this.targetCrosshairBlue, 0, 255);
     }
 
     public void resetCategory(Category category) {
@@ -225,10 +216,6 @@ public final class MeowyConfig {
             case CAMERA -> {
                 this.disableFrontCamera = false;
                 this.f5CrosshairEnabled = false;
-                this.dynamicCrosshairColorEnabled = false;
-                this.targetCrosshairRed = 130;
-                this.targetCrosshairGreen = 113;
-                this.targetCrosshairBlue = 255;
             }
             case VISUAL -> {
                 this.fullbrightEnabled = false;
@@ -238,51 +225,15 @@ public final class MeowyConfig {
             }
             case MISC -> {
                 this.discordRpcEnabled = false;
+                this.meowyCrosshairEnabled = false;
+                this.crosshairScale = 1.0f;
+                this.hitmarkersEnabled = false;
                 this.bowSkinsEnabled = false;
                 this.selectedBowSkin = BowSkin.MCCREE_PEACEKEEPER;
                 this.bowLaserMode = BowLaserMode.ENABLED;
             }
         }
         save();
-    }
-
-    public void resetAll() {
-        for (Category category : Category.values()) {
-            resetCategory(category);
-        }
-    }
-
-    public int getTargetCrosshairArgb() {
-        return (0xFF << 24)
-            | ((this.targetCrosshairRed & 0xFF) << 16)
-            | ((this.targetCrosshairGreen & 0xFF) << 8)
-            | (this.targetCrosshairBlue & 0xFF);
-    }
-
-    public String getTargetCrosshairHex() {
-        return String.format("#%02X%02X%02X",
-            this.targetCrosshairRed & 0xFF,
-            this.targetCrosshairGreen & 0xFF,
-            this.targetCrosshairBlue & 0xFF);
-    }
-
-    public boolean setTargetCrosshairHex(String hex) {
-        if (hex == null) return false;
-        String clean = hex.trim();
-        if (clean.startsWith("#")) {
-            clean = clean.substring(1);
-        }
-        if (clean.length() != 6) return false;
-        try {
-            int rgb = Integer.parseInt(clean, 16);
-            this.targetCrosshairRed = (rgb >> 16) & 0xFF;
-            this.targetCrosshairGreen = (rgb >> 8) & 0xFF;
-            this.targetCrosshairBlue = rgb & 0xFF;
-            save();
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
     }
 
     private static float clamp(float value, float min, float max) {

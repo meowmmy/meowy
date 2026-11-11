@@ -3,6 +3,7 @@ package dev.meowy.client.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.meowy.client.MeowyClient;
+import dev.meowy.client.config.MeowyConfig;
 import dev.ow.client.skin.BowRenderContext;
 import dev.ow.client.skin.BowSkinManager;
 import net.minecraft.client.renderer.item.ItemModelResolver;
@@ -30,7 +31,9 @@ public class ItemModelResolverMixin {
         LivingEntity entity,
         CallbackInfo ci
     ) {
-        BowRenderContext.pushLiving(entity, displayContext);
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pushLiving(entity, displayContext);
+        }
     }
 
     @Inject(method = "updateForLiving", at = @At("RETURN"))
@@ -41,7 +44,9 @@ public class ItemModelResolverMixin {
         LivingEntity entity,
         CallbackInfo ci
     ) {
-        BowRenderContext.pop();
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pop();
+        }
     }
 
     @Inject(method = "updateForNonLiving", at = @At("HEAD"), require = 0)
@@ -52,7 +57,9 @@ public class ItemModelResolverMixin {
         Entity entity,
         CallbackInfo ci
     ) {
-        BowRenderContext.pushNonLiving();
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pushNonLiving();
+        }
     }
 
     @Inject(method = "updateForNonLiving", at = @At("RETURN"), require = 0)
@@ -63,7 +70,9 @@ public class ItemModelResolverMixin {
         Entity entity,
         CallbackInfo ci
     ) {
-        BowRenderContext.pop();
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pop();
+        }
     }
 
     @WrapOperation(
@@ -79,7 +88,7 @@ public class ItemModelResolverMixin {
         Operation<Object> original
     ) {
         Object value = original.call(stack, componentType);
-        if (componentType == DataComponents.ITEM_MODEL) {
+        if (componentType == DataComponents.ITEM_MODEL && MeowyConfig.get().bowSkinsEnabled) {
             try {
                 Identifier originalId = (value instanceof Identifier id) ? id : null;
                 Identifier overrideId = BowSkinManager.resolveBowModelOverride(stack, originalId);
@@ -87,7 +96,6 @@ public class ItemModelResolverMixin {
                     return overrideId;
                 }
             } catch (Throwable t) {
-                // Never let a skin-resolution bug crash rendering; fall back to the vanilla model.
                 MeowyClient.logOnce("ItemModelResolverMixin.override", t);
             }
         }

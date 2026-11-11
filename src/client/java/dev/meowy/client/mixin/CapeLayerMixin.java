@@ -31,7 +31,7 @@ public class CapeLayerMixin {
                 ci.cancel();
                 return;
             }
-            RenderOpacityContext.push(RenderOpacityContext.Target.CAPE, opacity);
+            RenderOpacityContext.push(opacity, RenderOpacityContext.ORDER_CAPE);
         }
     }
 

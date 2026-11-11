@@ -1,5 +1,6 @@
 package dev.meowy.client.mixin;
 
+import dev.meowy.client.config.MeowyConfig;
 import dev.ow.client.skin.BowRenderContext;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -14,21 +15,29 @@ public class AbstractContainerScreenMixin {
 
     @Inject(method = "extractSlot", at = @At("HEAD"), require = 0)
     private void ow$beforeExtractSlot(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
-        BowRenderContext.pushContainerSlot(slot);
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pushContainerSlot(slot);
+        }
     }
 
     @Inject(method = "extractSlot", at = @At("RETURN"), require = 0)
     private void ow$afterExtractSlot(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
-        BowRenderContext.pop();
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pop();
+        }
     }
 
     @Inject(method = "extractCarriedItem", at = @At("HEAD"), require = 0)
     private void ow$beforeExtractCarriedItem(GuiGraphicsExtractor graphics, int mouseX, int mouseY, CallbackInfo ci) {
-        BowRenderContext.pushLocalGui();
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pushLocalGui();
+        }
     }
 
     @Inject(method = "extractCarriedItem", at = @At("RETURN"), require = 0)
     private void ow$afterExtractCarriedItem(GuiGraphicsExtractor graphics, int mouseX, int mouseY, CallbackInfo ci) {
-        BowRenderContext.pop();
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pop();
+        }
     }
 }

@@ -2,54 +2,63 @@ package dev.meowy.client.render;
 
 import net.minecraft.util.ARGB;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 /**
- * Thread-local render opacity stack used during Minecraft 26.2's SubmitNodeCollector phase
- * for local player model, cape, and armor pieces.
+ * Allocation-free thread-local render opacity and phase-order stack used during Minecraft 26.2's
+ * SubmitNodeCollector phase for local player model, cape, and armor pieces.
+ *
+ * <p>Assigns deferred SubmitNodeStorage phase orders (10 = body, 11 = armor/head/wings, 12 = cape)
+ * when opacity is < 100% so that order(0) features (such as maps in item frames, items in item frames,
+ * and the player's own held weapons) finish rendering BEFORE the semi-transparent player/cape blends over them.
  */
 public final class RenderOpacityContext {
-    public enum Target {
-        NONE,
-        PLAYER_BODY,
-        CAPE,
-        HELMET,
-        CHESTPLATE,
-        LEGGINGS,
-        BOOTS
+
+    public static final int ORDER_BODY  = 10;
+    public static final int ORDER_ARMOR = 11;
+    public static final int ORDER_CAPE  = 12;
+
+    private static final class AlphaStack {
+        final float[] values = new float[16];
+        final int[] orders = new int[16];
+        int size = 0;
     }
 
-    public record Frame(Target target, float alpha) {}
-
-    private static final ThreadLocal<Deque<Frame>> STACK = ThreadLocal.withInitial(ArrayDeque::new);
+    private static final ThreadLocal<AlphaStack> STACK = ThreadLocal.withInitial(AlphaStack::new);
 
     private RenderOpacityContext() {}
 
-    public static void push(Target target, float alpha) {
-        STACK.get().push(new Frame(target, Math.clamp(alpha, 0.0f, 1.0f)));
+    public static void push(float alpha) {
+        push(alpha, ORDER_BODY);
+    }
+
+    public static void push(float alpha, int phaseOrder) {
+        AlphaStack s = STACK.get();
+        if (s.size < s.values.length) {
+            s.values[s.size] = Math.clamp(alpha, 0.0f, 1.0f);
+            s.orders[s.size] = phaseOrder;
+            s.size++;
+        }
     }
 
     public static void pop() {
-        Deque<Frame> deque = STACK.get();
-        if (!deque.isEmpty()) {
-            deque.pop();
+        AlphaStack s = STACK.get();
+        if (s.size > 0) {
+            s.size--;
         }
     }
 
     public static boolean isActive() {
-        Deque<Frame> deque = STACK.get();
-        return !deque.isEmpty() && deque.peek().alpha() < 0.999f;
+        AlphaStack s = STACK.get();
+        return s.size > 0 && s.values[s.size - 1] < 0.999f;
     }
 
     public static float getCurrentAlpha() {
-        Deque<Frame> deque = STACK.get();
-        return deque.isEmpty() ? 1.0f : deque.peek().alpha();
+        AlphaStack s = STACK.get();
+        return s.size == 0 ? 1.0f : s.values[s.size - 1];
     }
 
-    public static Target getCurrentTarget() {
-        Deque<Frame> deque = STACK.get();
-        return deque.isEmpty() ? Target.NONE : deque.peek().target();
+    public static int getCurrentOrder() {
+        AlphaStack s = STACK.get();
+        return s.size == 0 ? 0 : s.orders[s.size - 1];
     }
 
     public static int applyAlphaToColor(int argbColor) {
@@ -62,9 +71,6 @@ public final class RenderOpacityContext {
             origAlpha = 255;
         }
         int newAlpha = Math.clamp(Math.round(origAlpha * alphaMultiplier), 0, 255);
-        int red = ARGB.red(argbColor);
-        int green = ARGB.green(argbColor);
-        int blue = ARGB.blue(argbColor);
-        return ARGB.color(newAlpha, red, green, blue);
+        return ARGB.color(newAlpha, ARGB.red(argbColor), ARGB.green(argbColor), ARGB.blue(argbColor));
     }
 }

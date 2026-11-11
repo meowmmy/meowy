@@ -5,11 +5,11 @@ import com.mojang.brigadier.Command;
 import dev.meowy.client.config.MeowyConfig;
 import dev.meowy.client.discord.DiscordRpcManager;
 import dev.meowy.client.gui.MeowyScreen;
+import dev.meowy.client.render.HitmarkerManager;
 import dev.meowy.client.skybox.CustomSkyboxManager;
 import dev.ow.client.animation.CassidyAnimator;
 import dev.ow.client.animation.PistolAnimator;
 import dev.ow.client.projectile.LocalArrowTracker;
-import dev.ow.client.render.LaserBulletRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
@@ -18,6 +18,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +61,17 @@ public final class MeowyClient implements ClientModInitializer {
                         openGuiNextTick = true;
                         return Command.SINGLE_SUCCESS;
                     })
+                    .then(
+                        ClientCommands.literal("debug")
+                            .executes(context -> {
+                                boolean on = HitmarkerManager.toggleDebug();
+                                LocalArrowTracker.setDebug(on);
+                                context.getSource().sendFeedback(
+                                    Component.literal("[Meowy] Hitmarker & arrow debug logging " + (on ? "ON" : "OFF") + " (see logs/latest.log)")
+                                );
+                                return Command.SINGLE_SUCCESS;
+                            })
+                    )
             );
         });
 
@@ -70,6 +82,11 @@ public final class MeowyClient implements ClientModInitializer {
             if (openGuiNextTick) {
                 openGuiNextTick = false;
                 openConfigScreen(client);
+            }
+            try {
+                HitmarkerManager.tick(client);
+            } catch (Throwable t) {
+                logOnce("HitmarkerManager.tick", t);
             }
             try {
                 PistolAnimator.tick(client);
@@ -88,7 +105,6 @@ public final class MeowyClient implements ClientModInitializer {
             }
         });
 
-        LaserBulletRenderer.init();
         CustomSkyboxManager.getInstance().registerReloadListener();
 
         DiscordRpcManager.getInstance().start();
@@ -102,14 +118,6 @@ public final class MeowyClient implements ClientModInitializer {
             return;
         }
         client.gui.setScreen(new MeowyScreen(client.gui.screen(), lastSelectedCategory));
-    }
-
-    public static void requestOpenGui() {
-        openGuiNextTick = true;
-    }
-
-    public static MeowyConfig.Category getLastSelectedCategory() {
-        return lastSelectedCategory;
     }
 
     public static void setLastSelectedCategory(MeowyConfig.Category category) {

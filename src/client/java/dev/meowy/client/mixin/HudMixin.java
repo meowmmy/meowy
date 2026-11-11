@@ -1,5 +1,6 @@
 package dev.meowy.client.mixin;
 
+import dev.meowy.client.config.MeowyConfig;
 import dev.ow.client.skin.BowRenderContext;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -26,7 +27,9 @@ public class HudMixin {
         int seed,
         CallbackInfo ci
     ) {
-        BowRenderContext.pushLiving(player, ItemDisplayContext.GUI);
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pushLiving(player, ItemDisplayContext.GUI);
+        }
     }
 
     @Inject(method = "extractSlot", at = @At("RETURN"), require = 0)
@@ -40,6 +43,8 @@ public class HudMixin {
         int seed,
         CallbackInfo ci
     ) {
-        BowRenderContext.pop();
+        if (MeowyConfig.get().bowSkinsEnabled) {
+            BowRenderContext.pop();
+        }
     }
 }

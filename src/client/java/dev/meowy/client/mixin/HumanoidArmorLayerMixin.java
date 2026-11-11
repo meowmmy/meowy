@@ -32,7 +32,7 @@ public class HumanoidArmorLayerMixin<S extends HumanoidRenderState> {
             ci.cancel();
             return;
         }
-        RenderOpacityContext.push(meowy$getTargetForSlot(slot), slotOpacity);
+        RenderOpacityContext.push(slotOpacity, RenderOpacityContext.ORDER_ARMOR);
     }
 
     @Inject(method = "renderArmorPiece", at = @At("RETURN"))
@@ -51,17 +51,6 @@ public class HumanoidArmorLayerMixin<S extends HumanoidRenderState> {
             case LEGS -> cfg.leggingsOpacity;
             case FEET -> cfg.bootsOpacity;
             default -> 1.0f;
-        };
-    }
-
-    @Unique
-    private static RenderOpacityContext.Target meowy$getTargetForSlot(EquipmentSlot slot) {
-        return switch (slot) {
-            case HEAD -> RenderOpacityContext.Target.HELMET;
-            case CHEST -> RenderOpacityContext.Target.CHESTPLATE;
-            case LEGS -> RenderOpacityContext.Target.LEGGINGS;
-            case FEET -> RenderOpacityContext.Target.BOOTS;
-            default -> RenderOpacityContext.Target.NONE;
         };
     }
 }

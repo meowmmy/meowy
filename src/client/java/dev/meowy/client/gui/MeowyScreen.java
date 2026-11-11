@@ -11,11 +11,11 @@ import dev.ow.client.skin.BowSkin;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
@@ -36,7 +36,7 @@ public final class MeowyScreen extends Screen {
     private final Screen parent;
     private Category selectedCategory;
 
-    // Animations & Hand/Sky-slider live transparency
+    // Animations & Hand/Sky/Crosshair-slider live transparency
     private long openTimestampMs;
     private long categorySwitchTimestampMs;
     private long resetFeedbackTimestampMs;
@@ -66,10 +66,6 @@ public final class MeowyScreen extends Screen {
     private long lastPreviewUpdateNano = System.nanoTime();
     private long lastPreviewInteractionMs = 0L;
 
-    // Hex Color Input Focus State
-    private boolean hexInputFocused = false;
-    private String hexInputBuffer = "";
-
     // Sidebar hover animation states
     private final float[] sidebarHoverProgress = new float[Category.values().length];
 
@@ -98,7 +94,6 @@ public final class MeowyScreen extends Screen {
         if (this.openTimestampMs == 0L) {
             this.openTimestampMs = System.currentTimeMillis();
         }
-        this.hexInputBuffer = MeowyConfig.get().getTargetCrosshairHex();
         this.expandedDropdown = null;
         rebuildCategoryRows();
     }
@@ -126,7 +121,6 @@ public final class MeowyScreen extends Screen {
         this.targetScrollOffset = 0.0f;
         this.activeDraggingSlider = null;
         this.expandedDropdown = null;
-        this.hexInputFocused = false;
         MeowyPreviewContext.stopPreviewSwing();
         rebuildCategoryRows();
     }
@@ -251,20 +245,6 @@ public final class MeowyScreen extends Screen {
                     () -> cfg.f5CrosshairEnabled,
                     val -> { cfg.f5CrosshairEnabled = val; MeowyConfig.save(); }
                 ));
-                this.activeRows.add(new ToggleRow(
-                    "Dynamic Entity Target Color",
-                    () -> cfg.dynamicCrosshairColorEnabled,
-                    val -> {
-                        cfg.dynamicCrosshairColorEnabled = val;
-                        if (!val) {
-                            this.hexInputFocused = false;
-                        }
-                        MeowyConfig.save();
-                    }
-                ));
-                this.activeRows.add(new ColorHexRow(
-                    "Target Crosshair Color"
-                ).withVisibility(() -> cfg.dynamicCrosshairColorEnabled));
             }
             case VISUAL -> {
                 this.activeRows.add(new ToggleRow(
@@ -304,6 +284,23 @@ public final class MeowyScreen extends Screen {
                     "Discord Rich Presence",
                     () -> cfg.discordRpcEnabled,
                     val -> { cfg.discordRpcEnabled = val; MeowyConfig.save(); }
+                ));
+                this.activeRows.add(new ToggleRow(
+                    "Meowy Crosshair",
+                    () -> cfg.meowyCrosshairEnabled,
+                    val -> { cfg.meowyCrosshairEnabled = val; MeowyConfig.save(); }
+                ));
+                this.activeRows.add(new SliderRow(
+                    "Crosshair Scale",
+                    0.25f, 3.00f, 0.05f,
+                    () -> cfg.crosshairScale,
+                    val -> { cfg.crosshairScale = val; MeowyConfig.save(); },
+                    val -> String.format("%.2fx", val)
+                ));
+                this.activeRows.add(new ToggleRow(
+                    "Hitmarkers",
+                    () -> cfg.hitmarkersEnabled,
+                    val -> { cfg.hitmarkersEnabled = val; MeowyConfig.save(); }
                 ));
                 this.activeRows.add(new ToggleRow(
                     "Custom Bow Skins",
@@ -375,7 +372,6 @@ public final class MeowyScreen extends Screen {
         this.previewY = this.containerY;
         this.previewH = this.containerH;
 
-        // Center the "RESET TO DEFAULT" button directly under the live preview window
         this.resetBtnW = Math.min(this.previewW, 126);
         this.resetBtnH = 22;
         this.resetBtnX = this.previewX + (this.previewW - this.resetBtnW) / 2;
@@ -421,13 +417,14 @@ public final class MeowyScreen extends Screen {
             }
         }
 
-        // When dragging a slider in the HAND category OR the Sky Brightness slider in VISUAL,
-        // fade the GUI to 22% opacity so the player can clearly see their hand or sky in real time!
+        // Fade GUI to 22% opacity when dragging HAND sliders, Sky Brightness, or Crosshair Scale
         boolean draggingHandSetting = (this.selectedCategory == Category.HAND && this.activeDraggingSlider != null);
         boolean draggingSkyBrightness = (this.selectedCategory == Category.VISUAL
             && this.activeDraggingSlider != null
             && "Sky Brightness".equals(this.activeDraggingSlider.name));
-        float targetPreviewAlpha = (draggingHandSetting || draggingSkyBrightness) ? 0.22f : 1.0f;
+        boolean draggingCrosshairScale = (this.activeDraggingSlider != null
+            && "Crosshair Scale".equals(this.activeDraggingSlider.name));
+        float targetPreviewAlpha = (draggingHandSetting || draggingSkyBrightness || draggingCrosshairScale) ? 0.22f : 1.0f;
         this.handPreviewAlpha = Mth.lerp(0.28f, this.handPreviewAlpha, targetPreviewAlpha);
 
         boolean draggingSwingSlider = draggingHandSetting
@@ -585,7 +582,6 @@ public final class MeowyScreen extends Screen {
                 );
             }
         }
-
     }
 
     private List<SettingRow> getVisibleRows() {
@@ -672,7 +668,6 @@ public final class MeowyScreen extends Screen {
         renderLivePlayerPreviewCard(graphics, contentAlpha);
         renderResetButton(graphics, mouseX, mouseY, contentAlpha);
 
-        // Render expanded dropdown overlay on top of everything so it is never clipped
         if (this.expandedDropdown != null) {
             this.expandedDropdown.renderDropdownMenuOverlay(graphics, mouseX, mouseY, contentAlpha);
         }
@@ -766,10 +761,6 @@ public final class MeowyScreen extends Screen {
         );
     }
 
-    // =========================================================================
-    // Mouse & Keyboard Input Handling (Minecraft 26.2 Event Signatures)
-    // =========================================================================
-
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
@@ -777,9 +768,6 @@ public final class MeowyScreen extends Screen {
         int button = event.button();
 
         if (button == 0) {
-            this.hexInputFocused = false;
-
-            // 0. If a dropdown menu is currently expanded, handle clicks on its options first
             if (this.expandedDropdown != null) {
                 boolean handledByMenu = this.expandedDropdown.handleMenuClick(mouseX, mouseY);
                 this.expandedDropdown = null;
@@ -806,21 +794,20 @@ public final class MeowyScreen extends Screen {
                 }
             }
 
-            // 3. Check RESET TO DEFAULT button
+            // 2. Check RESET TO DEFAULT button
             if (isMouseOverRect(mouseX, mouseY, this.resetBtnX, this.resetBtnY, this.resetBtnW, this.resetBtnH)) {
                 MeowyConfig.get().resetCategory(this.selectedCategory);
-                this.hexInputBuffer = MeowyConfig.get().getTargetCrosshairHex();
                 this.resetFeedbackTimestampMs = System.currentTimeMillis();
                 return true;
             }
 
-            // 4. Check 3D Live Preview Card click-and-drag rotation
+            // 3. Check 3D Live Preview Card click-and-drag rotation
             if (isMouseOverRect(mouseX, mouseY, this.previewX, this.previewY, this.previewW, this.previewH)) {
                 this.draggingPreview = true;
                 return true;
             }
 
-            // 5. Check Visible Settings Rows inside container
+            // 4. Check Visible Settings Rows inside container
             if (isMouseOverRect(mouseX, mouseY, this.containerX, this.containerY, this.containerW, this.containerH)) {
                 List<SettingRow> visibleRows = getVisibleRows();
                 int currentRowY = this.containerY + 2 - Math.round(this.scrollOffset);
@@ -887,88 +874,15 @@ public final class MeowyScreen extends Screen {
                 this.expandedDropdown = null;
                 return true;
             }
-            if (this.hexInputFocused) {
-                this.hexInputFocused = false;
-                this.hexInputBuffer = MeowyConfig.get().getTargetCrosshairHex();
-                return true;
-            }
             this.onClose();
             return true;
         }
-
-        if (this.hexInputFocused) {
-            if (keyCode == InputConstants.KEY_V && this.minecraft != null && this.minecraft.keyboardHandler != null) {
-                String clip = this.minecraft.keyboardHandler.getClipboard();
-                if (clip != null && !clip.isBlank()) {
-                    StringBuilder filtered = new StringBuilder("#");
-                    for (int i = 0; i < clip.length() && filtered.length() < 7; i++) {
-                        char c = clip.charAt(i);
-                        if (Character.digit(c, 16) != -1) {
-                            filtered.append(Character.toUpperCase(c));
-                        }
-                    }
-                    if (filtered.length() > 1) {
-                        this.hexInputBuffer = filtered.toString();
-                        if (this.hexInputBuffer.length() == 7) {
-                            MeowyConfig.get().setTargetCrosshairHex(this.hexInputBuffer);
-                        }
-                        return true;
-                    }
-                }
-            }
-
-            if (keyCode == InputConstants.KEY_RETURN || keyCode == InputConstants.KEY_NUMPADENTER) {
-                MeowyConfig.get().setTargetCrosshairHex(this.hexInputBuffer);
-                this.hexInputBuffer = MeowyConfig.get().getTargetCrosshairHex();
-                this.hexInputFocused = false;
-                return true;
-            }
-            if (keyCode == InputConstants.KEY_BACKSPACE && !this.hexInputBuffer.isEmpty()) {
-                this.hexInputBuffer = this.hexInputBuffer.substring(0, this.hexInputBuffer.length() - 1);
-                if (this.hexInputBuffer.length() == 7) {
-                    MeowyConfig.get().setTargetCrosshairHex(this.hexInputBuffer);
-                }
-                return true;
-            }
-            return true;
-        }
-
         return super.keyPressed(event);
-    }
-
-    @Override
-    public boolean charTyped(CharacterEvent event) {
-        if (this.hexInputFocused) {
-            String typed = event.codepointAsString();
-            for (int i = 0; i < typed.length(); i++) {
-                char c = typed.charAt(i);
-                if (c == '#' && this.hexInputBuffer.isEmpty()) {
-                    this.hexInputBuffer = "#";
-                } else if (Character.digit(c, 16) != -1) {
-                    if (!this.hexInputBuffer.startsWith("#")) {
-                        this.hexInputBuffer = "#" + this.hexInputBuffer;
-                    }
-                    if (this.hexInputBuffer.length() < 7) {
-                        this.hexInputBuffer += Character.toUpperCase(c);
-                        if (this.hexInputBuffer.length() == 7) {
-                            MeowyConfig.get().setTargetCrosshairHex(this.hexInputBuffer);
-                        }
-                    }
-                }
-            }
-            return true;
-        }
-
-        return super.charTyped(event);
     }
 
     private static boolean isMouseOverRect(double mx, double my, int x, int y, int w, int h) {
         return mx >= x && mx < x + w && my >= y && my < y + h;
     }
-
-    // =========================================================================
-    // Inner Row Components (Toggle, Dropdown, Slider, Hex Input)
-    // =========================================================================
 
     private abstract class SettingRow {
         final String name;
@@ -1363,78 +1277,6 @@ public final class MeowyScreen extends Screen {
             }
             float clamped = Mth.clamp(raw, this.min, this.max);
             this.setter.accept(clamped);
-        }
-    }
-
-    /**
-     * Clean #RRGGBB Hex Code input box + live color preview swatch for Target Crosshair Color.
-     */
-    private final class ColorHexRow extends SettingRow {
-        private int hexBoxX, hexBoxY, hexBoxW = 68, hexBoxH = 18;
-        private int swatchX, swatchY, swatchSize = 18;
-
-        ColorHexRow(String name) {
-            super(name);
-        }
-
-        @Override
-        void renderControl(GuiGraphicsExtractor graphics, int rowX, int rowY, int rowW, int rowH, int mouseX, int mouseY, float alpha) {
-            MeowyConfig cfg = MeowyConfig.get();
-
-            this.swatchX = rowX + rowW - this.swatchSize - 10;
-            this.swatchY = rowY + (rowH - this.swatchSize) / 2;
-
-            MeowyTheme.drawSoftPanel(
-                graphics,
-                this.swatchX,
-                this.swatchY,
-                this.swatchSize,
-                this.swatchSize,
-                MeowyTheme.withAlpha(cfg.getTargetCrosshairArgb(), alpha),
-                MeowyTheme.withAlpha(MeowyTheme.BRIGHT_LAVENDER, alpha)
-            );
-
-            this.hexBoxX = this.swatchX - this.hexBoxW - 6;
-            this.hexBoxY = rowY + (rowH - this.hexBoxH) / 2;
-
-            boolean hovered = isMouseOverRect(mouseX, mouseY, this.hexBoxX, this.hexBoxY, this.hexBoxW, this.hexBoxH);
-            int boxBorder = MeowyScreen.this.hexInputFocused
-                ? MeowyTheme.BRIGHT_LAVENDER
-                : (hovered ? MeowyTheme.PRIMARY_PURPLE_ACCENT : MeowyTheme.BORDER_COLOR);
-
-            MeowyTheme.drawSoftPanel(
-                graphics,
-                this.hexBoxX,
-                this.hexBoxY,
-                this.hexBoxW,
-                this.hexBoxH,
-                MeowyTheme.withAlpha(MeowyTheme.SECONDARY_BG, alpha),
-                MeowyTheme.withAlpha(boxBorder, alpha)
-            );
-
-            String displayHex = MeowyScreen.this.hexInputFocused
-                ? MeowyScreen.this.hexInputBuffer + ((System.currentTimeMillis() / 450L) % 2L == 0L ? "_" : "")
-                : cfg.getTargetCrosshairHex();
-
-            graphics.text(
-                MeowyScreen.this.font,
-                MeowyTheme.sansText(displayHex),
-                this.hexBoxX + 6,
-                this.hexBoxY + 5,
-                MeowyTheme.withAlpha(MeowyTheme.TEXT_PRIMARY, alpha),
-                true
-            );
-        }
-
-        @Override
-        boolean mouseClicked(double mouseX, double mouseY, int rowX, int rowY, int rowW, int rowH) {
-            if (isMouseOverRect(mouseX, mouseY, this.hexBoxX, this.hexBoxY, this.hexBoxW, this.hexBoxH)
-                || isMouseOverRect(mouseX, mouseY, this.swatchX, this.swatchY, this.swatchSize, this.swatchSize)) {
-                MeowyScreen.this.hexInputFocused = true;
-                MeowyScreen.this.hexInputBuffer = MeowyConfig.get().getTargetCrosshairHex();
-                return true;
-            }
-            return false;
         }
     }
 }

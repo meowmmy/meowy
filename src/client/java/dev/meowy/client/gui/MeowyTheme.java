@@ -21,7 +21,6 @@ public final class MeowyTheme {
     public static final int SECONDARY_BG          = 0xFF272340;
     public static final int PRIMARY_PURPLE_ACCENT = 0xFF8271FF;
     public static final int BRIGHT_LAVENDER       = 0xFFA99BFF;
-    public static final int SECONDARY_BLUE_ACCENT = 0xFF668CFF;
 
     // Text Colors
     public static final int TEXT_PRIMARY          = 0xFFFFFFFF;

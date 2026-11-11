@@ -1,7 +1,5 @@
 package dev.ow.client.skin;
 
-import dev.ow.client.animation.BowPullTracker.PullStage;
-import dev.ow.client.util.ScreenAccess;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.LivingEntity;
@@ -9,18 +7,9 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 /**
- * Thread-local context tracker ensuring that bow skin overrides apply strictly to:
- * <ul>
- *   <li>First-person hand rendering of the local player</li>
- *   <li>Third-person rendering of the local player</li>
- *   <li>Hotbar and inventory slots belonging to the local player</li>
- *   <li>The live preview inside the {@code /ow} GUI</li>
- * </ul>
- * And NEVER to other players' bows, dropped world items, item frames, or armor stands.
+ * Allocation-free thread-local context tracker ensuring that bow skin overrides apply strictly to
+ * the local player's hands, third-person model, hotbar, and inventory slots.
  */
 public final class BowRenderContext {
 
@@ -28,13 +17,30 @@ public final class BowRenderContext {
         UNKNOWN,
         LOCAL_PLAYER_LIVING,
         OTHER_ENTITY,
-        LOCAL_PLAYER_GUI,
-        OW_GUI_PREVIEW
+        LOCAL_PLAYER_GUI
     }
 
-    public record Frame(OwnerScope scope, ItemDisplayContext displayContext, PullStage previewStage) {}
+    private static final class ContextStack {
+        final OwnerScope[] scopes = new OwnerScope[16];
+        final ItemDisplayContext[] contexts = new ItemDisplayContext[16];
+        int size = 0;
 
-    private static final ThreadLocal<Deque<Frame>> STACK = ThreadLocal.withInitial(ArrayDeque::new);
+        void push(OwnerScope scope, ItemDisplayContext ctx) {
+            if (this.size < this.scopes.length) {
+                this.scopes[this.size] = scope;
+                this.contexts[this.size] = ctx;
+                this.size++;
+            }
+        }
+
+        void pop() {
+            if (this.size > 0) {
+                this.size--;
+            }
+        }
+    }
+
+    private static final ThreadLocal<ContextStack> STACK = ThreadLocal.withInitial(ContextStack::new);
 
     private BowRenderContext() {}
 
@@ -42,54 +48,45 @@ public final class BowRenderContext {
         Minecraft client = Minecraft.getInstance();
         boolean isLocal = (client != null && client.player != null && entity == client.player);
         OwnerScope scope = isLocal ? OwnerScope.LOCAL_PLAYER_LIVING : OwnerScope.OTHER_ENTITY;
-        STACK.get().push(new Frame(scope, displayContext != null ? displayContext : ItemDisplayContext.NONE, null));
+        STACK.get().push(scope, displayContext != null ? displayContext : ItemDisplayContext.NONE);
     }
 
     public static void pushNonLiving() {
-        STACK.get().push(new Frame(OwnerScope.OTHER_ENTITY, ItemDisplayContext.NONE, null));
+        STACK.get().push(OwnerScope.OTHER_ENTITY, ItemDisplayContext.NONE);
     }
 
     public static void pushContainerSlot(Slot slot) {
         Minecraft client = Minecraft.getInstance();
         boolean isLocalInventorySlot = false;
         if (client != null && client.player != null && slot != null) {
-            if (slot.container == client.player.getInventory()) {
-                isLocalInventorySlot = true;
-            } else if (ScreenAccess.current(client) instanceof InventoryScreen) {
+            if (slot.container == client.player.getInventory() || client.gui.screen() instanceof InventoryScreen) {
                 isLocalInventorySlot = true;
             }
         }
-        OwnerScope scope = isLocalInventorySlot ? OwnerScope.LOCAL_PLAYER_GUI : OwnerScope.OTHER_ENTITY;
-        STACK.get().push(new Frame(scope, ItemDisplayContext.GUI, null));
+        STACK.get().push(isLocalInventorySlot ? OwnerScope.LOCAL_PLAYER_GUI : OwnerScope.OTHER_ENTITY, ItemDisplayContext.GUI);
     }
 
     public static void pushLocalGui() {
-        STACK.get().push(new Frame(OwnerScope.LOCAL_PLAYER_GUI, ItemDisplayContext.GUI, null));
-    }
-
-    public static void pushOwPreview(PullStage stage) {
-        STACK.get().push(new Frame(OwnerScope.OW_GUI_PREVIEW, ItemDisplayContext.GUI, stage != null ? stage : PullStage.IDLE));
+        STACK.get().push(OwnerScope.LOCAL_PLAYER_GUI, ItemDisplayContext.GUI);
     }
 
     public static void pop() {
-        Deque<Frame> deque = STACK.get();
-        if (!deque.isEmpty()) {
-            deque.pop();
-        }
+        STACK.get().pop();
     }
 
-    public static Frame current() {
-        return STACK.get().peek();
+    public static ItemDisplayContext currentDisplayContext() {
+        ContextStack s = STACK.get();
+        return s.size > 0 ? s.contexts[s.size - 1] : ItemDisplayContext.GUI;
     }
 
     public static boolean shouldOverrideForLocalPlayer(ItemStack stack) {
         if (stack == null || stack.isEmpty()) {
             return false;
         }
-        Frame frame = STACK.get().peek();
-        if (frame != null) {
-            return switch (frame.scope()) {
-                case LOCAL_PLAYER_LIVING, LOCAL_PLAYER_GUI, OW_GUI_PREVIEW -> true;
+        ContextStack s = STACK.get();
+        if (s.size > 0) {
+            return switch (s.scopes[s.size - 1]) {
+                case LOCAL_PLAYER_LIVING, LOCAL_PLAYER_GUI -> true;
                 case OTHER_ENTITY -> false;
                 case UNKNOWN -> isStackOwnedByLocalPlayer(stack);
             };

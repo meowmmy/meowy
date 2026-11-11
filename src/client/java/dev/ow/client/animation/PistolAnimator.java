@@ -5,7 +5,6 @@ import dev.ow.client.config.OwConfig;
 import dev.ow.client.config.OwTuning;
 import dev.ow.client.skin.BowSkin;
 import dev.ow.client.skin.BowSkinManager;
-import dev.ow.client.util.ScreenAccess;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -252,7 +251,7 @@ public final class PistolAnimator {
         float dt = lastUpdateNs == 0L ? 0.0f : Math.min((now - lastUpdateNs) / 1.0E9f, MAX_DT);
         lastUpdateNs = now;
 
-        boolean keyDown = client.options.keyUse.isDown() && ScreenAccess.current(client) == null;
+        boolean keyDown = client.options.keyUse.isDown() && client.gui.screen() == null;
         ItemStack useItem = player.isUsingItem() ? player.getUseItem() : ItemStack.EMPTY;
         boolean using = BowSkinManager.isBow(useItem, null);
         int useTicks = using ? player.getTicksUsingItem() : 0;

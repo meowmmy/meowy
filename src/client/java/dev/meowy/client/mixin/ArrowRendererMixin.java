@@ -17,8 +17,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Hides the 3D arrow model (shaft, tip, fletching, and shadow) strictly for arrows fired by
- * the local player and submits the golden-white laser bullet replacement via {@link SubmitNodeCollector}.
+ * Hides the 3D arrow model strictly for arrows fired by the local player and submits the laser bullet
+ * replacement using the unified hybrid laser tracer renderer.
  */
 @Mixin(ArrowRenderer.class)
 public abstract class ArrowRendererMixin<T extends AbstractArrow, S extends ArrowRenderState> {
@@ -34,12 +34,11 @@ public abstract class ArrowRendererMixin<T extends AbstractArrow, S extends Arro
             ext.ow$setLocalPlayerArrow(replaceWithLaser);
             if (replaceWithLaser) {
                 state.shadowRadius = 0.0f;
-                ext.ow$setBulletState(LaserBulletRenderer.computeBulletState(entity, state.xRot, state.yRot));
+                ext.ow$setBulletState(LaserBulletRenderer.computeBulletState(entity, state.xRot, state.yRot, partialTicks));
             } else {
                 ext.ow$setBulletState(null);
             }
         } catch (Throwable t) {
-            // On any failure draw the vanilla arrow instead of crashing.
             ext.ow$setLocalPlayerArrow(false);
             ext.ow$setBulletState(null);
             MeowyClient.logOnce("ArrowRendererMixin.extract", t);
@@ -61,10 +60,13 @@ public abstract class ArrowRendererMixin<T extends AbstractArrow, S extends Arro
         OwArrowRenderStateExt ext = (OwArrowRenderStateExt) state;
         if (ext.ow$isLocalPlayerArrow()) {
             try {
-                LaserBulletRenderer.submitLaserBullet(ext.ow$getBulletState(), poseStack, submitNodeCollector);
+                LaserBulletRenderer.LaserBulletState bulletState = ext.ow$getBulletState();
+                if (bulletState != null) {
+                    LaserBulletRenderer.submitLaserBullet(bulletState, poseStack, submitNodeCollector);
+                }
+                // Cancel the vanilla arrow model when replaced with the hybrid laser tracer
                 ci.cancel();
             } catch (Throwable t) {
-                // Laser failed to submit: fall through so the vanilla arrow renders instead.
                 MeowyClient.logOnce("ArrowRendererMixin.submit", t);
             }
         }
