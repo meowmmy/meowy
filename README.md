@@ -12,18 +12,6 @@
 [![Discord](https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/VnC54WcfhS)
 
 </div>
-
----
-
-## What is Meowy?
-
-Meowy lets you change how the game **looks** with an easy in-game menu.
-It is **100% client-side** and is safe for use on any server.
-
-Open the menu with the **`/meowy`** command or set a key for **Open GUI** in your Controls.
-
----
-
 ## Features
 
 ### Player
